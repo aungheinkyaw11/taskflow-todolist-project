@@ -1,0 +1,36 @@
+/* =====================================================
+   index.css – Global Styles
+   These styles apply to the ENTIRE app.
+   Component-specific styles live inside App.jsx
+   ===================================================== */
+
+/* Remove default spacing from all elements */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Base page styles */
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background-color: #f1f5f9;
+  color: #1e293b;
+  min-height: 100vh;
+}
+
+/* Make buttons and inputs inherit the font */
+button, input, select, textarea {
+  font-family: inherit;
+}
+
+/* Remove default list styles */
+ul, ol {
+  list-style: none;
+}
+
+/* Make links look clean */
+a {
+  color: inherit;
+  text-decoration: none;
+}
