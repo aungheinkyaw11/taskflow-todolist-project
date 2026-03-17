@@ -1,0 +1,55 @@
+# k8s/backend-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: taskflow-backend
+  namespace: taskflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: taskflow-backend
+  template:
+    metadata:
+      labels:
+        app: taskflow-backend
+    spec:
+      containers:
+        - name: backend
+          image: 788279898314.dkr.ecr.us-east-1.amazonaws.com/taskflow-backend:1.0
+          ports:
+            - containerPort: 5001
+          envFrom:
+            - configMapRef:
+                name: taskflow-config
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: taskflow-secret
+                  key: DB_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: taskflow-secret
+                  key: JWT_SECRET
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "300m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: taskflow-backend-service
+  namespace: taskflow
+spec:
+  selector:
+    app: taskflow-backend
+  ports:
+    - port: 5001
+      targetPort: 5001
+  type: ClusterIP
