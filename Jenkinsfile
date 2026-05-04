@@ -18,6 +18,15 @@ pipeline {
             }
         }
 
+        stage('Login to ECR') {
+            steps {
+                sh '''
+                    aws ecr get-login-password --region $AWS_REGION | \
+                    docker login --username AWS --password-stdin $ECR_REGISTRY
+                '''
+            }
+        }
+
         stage('Build Backend Image') {
             steps {
                 sh '''
@@ -30,6 +39,22 @@ pipeline {
             steps {
                 sh '''
                     docker build -t $ECR_REGISTRY/$FRONTEND_IMAGE:$IMAGE_TAG ./frontend
+                '''
+            }
+        }
+
+        stage('Push Backend Image') {
+            steps {
+                sh '''
+                    docker push $ECR_REGISTRY/$BACKEND_IMAGE:$IMAGE_TAG
+                '''
+            }
+        }
+
+        stage('Push Frontend Image') {
+            steps {
+                sh '''
+                    docker push $ECR_REGISTRY/$FRONTEND_IMAGE:$IMAGE_TAG
                 '''
             }
         }
