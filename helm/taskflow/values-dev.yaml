@@ -1,0 +1,13 @@
+backend:
+  replicaCount: 1
+  image:
+    tag: "1.0.0"
+
+frontend:
+  replicaCount: 1
+  image:
+    tag: "1.0.1"
+
+configMap:
+  data:
+    NODE_ENV: "development"

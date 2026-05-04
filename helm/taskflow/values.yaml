@@ -1,3 +1,4 @@
+## Backend Configuration
 backend:
   name: taskflow-backend
   replicaCount: 1
@@ -19,6 +20,8 @@ backend:
       memory: "256Mi"
       cpu: "300m"
 
+
+## Frontend Configuration
 frontend:
   name: taskflow-frontend
   replicaCount: 1
@@ -40,6 +43,8 @@ frontend:
       memory: "256Mi"
       cpu: "300m"
 
+
+## ConfigMap and Secret Configuration
 configMap:
   name: taskflow-config
   data:
@@ -51,3 +56,47 @@ secret:
   data:
     DB_PASSWORD: "taskflowuserstrongpassword"
     JWT_SECRET: "56adf552a639de170b4ac63fc2561c8a2cb65275ca8735402c86bff06aadfdb4"
+
+
+## Gateway API Configuration
+gatewayClass:
+  enabled: true
+  name: nginx
+  controllerName: gateway.nginx.org/nginx-gateway-controller
+
+gateway:
+  enabled: true
+  name: taskflow-gateway
+  namespace: nginx-gateway
+  gatewayClassName: nginx
+  listener:
+    name: http
+    port: 80
+    protocol: HTTP
+  allowedRoutes:
+    namespacesFrom: All
+
+httpRoute:
+  enabled: true
+  name: taskflow-route
+  gatewayName: taskflow-gateway
+  gatewayNamespace: nginx-gateway
+  backend:
+    serviceName: taskflow-backend-service
+    servicePort: 5001
+  frontend:
+    serviceName: taskflow-frontend-service
+    servicePort: 80
+
+ingress:
+  enabled: true
+  name: external-alb
+  namespace: nginx-gateway
+  className: alb
+  host: zaneapp.mohicanstech.com
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+  backend:
+    serviceName: ngf-nginx-gateway-fabric
+    servicePort: 80
