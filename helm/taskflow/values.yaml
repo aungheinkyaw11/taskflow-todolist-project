@@ -11,6 +11,13 @@ backend:
     type: ClusterIP
     port: 5001
     targetPort: 5001
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "300m"
 
 frontend:
   name: taskflow-frontend
@@ -25,9 +32,22 @@ frontend:
     type: ClusterIP
     port: 80
     targetPort: 80
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "300m"
 
 configMap:
   name: taskflow-config
   data:
     NODE_ENV: "production"
     PORT: "5001"
+
+secret:
+  name: taskflow-secret
+  data:
+    DB_PASSWORD: "taskflowuserstrongpassword"
+    JWT_SECRET: "56adf552a639de170b4ac63fc2561c8a2cb65275ca8735402c86bff06aadfdb4"
