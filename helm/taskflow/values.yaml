@@ -3,8 +3,8 @@ backend:
   name: taskflow-backend
   replicaCount: 1
   image:
-    repository: public.ecr.aws/m1p2k8l9/taskflow-backend
-    tag: "1.0.0"
+    repository: 788279898314.dkr.ecr.ap-southeast-1.amazonaws.com/taskflow-backend
+    tag: "4"
     pullPolicy: IfNotPresent
   containerPort: 5001
   service:
@@ -26,8 +26,8 @@ frontend:
   name: taskflow-frontend
   replicaCount: 1
   image:
-    repository: public.ecr.aws/m1p2k8l9/taskflow-frontend
-    tag: "1.0.1"
+    repository: 788279898314.dkr.ecr.ap-southeast-1.amazonaws.com/taskflow-frontend
+    tag: "4"
     pullPolicy: IfNotPresent
   containerPort: 80
   service:
