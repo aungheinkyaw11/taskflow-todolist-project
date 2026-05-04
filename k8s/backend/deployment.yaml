@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: 499193102935.dkr.ecr.us-east-1.amazonaws.com/taskflow-backend:1.0.0
+          image: public.ecr.aws/m1p2k8l9/taskflow-backend:1.0.0
           ports:
             - containerPort: 5001
           envFrom:

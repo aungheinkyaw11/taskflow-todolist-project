@@ -8,7 +8,8 @@ data:
   PORT: "5001"
   DB_USER: "taskflow_user"
   DB_NAME: "taskflow"
-  DB_HOST: "taskflowrds.crmeaegqqncj.us-east-1.rds.amazonaws.com"  # ← RDS endpoint!
+  DB_HOST: "taskflow.crmeaegqqncj.us-east-1.rds.amazonaws.com"  # ← RDS endpoint!
   DB_PORT: "5432"
+  DB_SSL: "true"
   NODE_ENV: "production"
-  CLIENT_URL: "http://k8s-nginxgat-ngfnginx-3eebdf9149-ff08dd6c689aeb68.elb.us-east-1.amazonaws.com"
+  CLIENT_URL: "http://zaneapp.mohicanstech.com"  # ← frontend URL for CORS and email links

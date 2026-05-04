@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: 499193102935.dkr.ecr.us-east-1.amazonaws.com/taskflow-frontend:1.0.0
+          image: public.ecr.aws/m1p2k8l9/taskflow-frontend:1.0.1
           ports:
             - containerPort: 80
           resources:
