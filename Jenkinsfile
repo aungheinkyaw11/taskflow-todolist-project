@@ -65,34 +65,76 @@ pipeline {
             }
         }
 
-        stage('Deploy to EKS with Helm') {
+        stage('Update Helm Values') {
             steps {
                 sh '''
-                    helm upgrade --install taskflow ./helm/taskflow \
-                      -n taskflow \
-                      --create-namespace \
-                      -f ./helm/taskflow/values.yaml \
-                      --set backend.image.repository=$ECR_REGISTRY/$BACKEND_IMAGE \
-                      --set frontend.image.repository=$ECR_REGISTRY/$FRONTEND_IMAGE \
-                      --set backend.image.tag=$IMAGE_TAG \
-                      --set frontend.image.tag=$IMAGE_TAG
+                    echo "Updating Helm values for Argo CD"
+                    echo "New image tag: $IMAGE_TAG"
+        
+                    sed -i "/backend:/,/frontend:/ s/tag:.*/tag: \\"$IMAGE_TAG\\"/" helm/taskflow/values-dev.yaml
+                    sed -i "/frontend:/,/configMap:/ s/tag:.*/tag: \\"$IMAGE_TAG\\"/" helm/taskflow/values-dev.yaml
+        
+                    echo "Updated values-dev.yaml:"
+                    cat helm/taskflow/values-dev.yaml
                 '''
             }
         }
-
-        stage('Verify Deployment') {
+        
+        stage('Commit Helm Changes') {
             steps {
                 sh '''
-                    kubectl rollout status deployment/taskflow-backend -n taskflow
-                    kubectl rollout status deployment/taskflow-frontend -n taskflow
-
-                    kubectl get pods -n taskflow
-
-                    kubectl describe deployment taskflow-backend -n taskflow | grep Image
-                    kubectl describe deployment taskflow-frontend -n taskflow | grep Image
+                    git config user.email "jenkins@taskflow.local"
+                    git config user.name "jenkins"
+        
+                    git add helm/taskflow/values-dev.yaml
+                    git commit -m "Update dev image tag to $IMAGE_TAG [skip ci]" || echo "No changes to commit"
                 '''
             }
         }
+        
+        stage('Push Helm Changes') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'github_cred',
+                    usernameVariable: 'GIT_USERNAME',
+                    passwordVariable: 'GIT_TOKEN'
+                )]) {
+                    sh '''
+                        git remote set-url origin https://$GIT_USERNAME:$GIT_TOKEN@github.com/aungheinkyaw11/taskflow-todolist-project.git
+                        git push origin HEAD:develop
+                    '''
+                }
+            }
+        }
+
+        // stage('Deploy to EKS with Helm') {
+        //     steps {
+        //         sh '''
+        //             helm upgrade --install taskflow ./helm/taskflow \
+        //               -n taskflow \
+        //               --create-namespace \
+        //               -f ./helm/taskflow/values.yaml \
+        //               --set backend.image.repository=$ECR_REGISTRY/$BACKEND_IMAGE \
+        //               --set frontend.image.repository=$ECR_REGISTRY/$FRONTEND_IMAGE \
+        //               --set backend.image.tag=$IMAGE_TAG \
+        //               --set frontend.image.tag=$IMAGE_TAG
+        //         '''
+        //     }
+        // }
+
+        // stage('Verify Deployment') {
+        //     steps {
+        //         sh '''
+        //             kubectl rollout status deployment/taskflow-backend -n taskflow
+        //             kubectl rollout status deployment/taskflow-frontend -n taskflow
+
+        //             kubectl get pods -n taskflow
+
+        //             kubectl describe deployment taskflow-backend -n taskflow | grep Image
+        //             kubectl describe deployment taskflow-frontend -n taskflow | grep Image
+        //         '''
+        //     }
+        // }
     }
 
     post {
