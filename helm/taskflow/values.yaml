@@ -71,7 +71,7 @@ gatewayClass:
   controllerName: gateway.nginx.org/nginx-gateway-controller
 
 gateway:
-  enabled: false
+  enabled: true
   name: taskflow-gateway
   namespace: nginx-gateway
   gatewayClassName: nginx
@@ -95,7 +95,7 @@ httpRoute:
     servicePort: 80
 
 ingress:
-  enabled: false
+  enabled: true
   name: external-alb
   namespace: nginx-gateway
   className: alb
