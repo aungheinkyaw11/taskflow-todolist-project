@@ -1,7 +1,7 @@
 ## Backend Configuration
 backend:
   name: taskflow-backend
-  replicaCount: 1
+  replicaCount: 2
   image:
     repository: 788279898314.dkr.ecr.ap-southeast-1.amazonaws.com/taskflow-backend
     tag: "4"
