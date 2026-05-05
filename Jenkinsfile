@@ -109,6 +109,19 @@ pipeline {
                 }
             }
         }
+        stage ('Deploy to EKS with Helm') {
+            steps {
+                sh '''
+                    helm upgrade --install taskflow ./helm/taskflow \
+                    -n taskflow \
+                    --create-namespace \
+                    -f ./helm/taskflow/values.yaml \
+                    -f ./helm/taskflow/values-dev.yaml \
+                    --set backend.image.tag=$IMAGE_TAG \
+                    --set frontend.image.tag=$IMAGE_TAG
+                '''
+            }
+        }
     }
 
     post {
