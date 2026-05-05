@@ -48,8 +48,14 @@ frontend:
 configMap:
   name: taskflow-config
   data:
-    NODE_ENV: "production"
     PORT: "5001"
+    DB_USER: "taskflow_user"
+    DB_NAME: "taskflow"
+    DB_HOST: "taskflow.crmeaegqqncj.us-east-1.rds.amazonaws.com"
+    DB_PORT: "5432"
+    DB_SSL: "true"
+    NODE_ENV: "production"
+    CLIENT_URL: "http://zaneapp.mohicanstech.com"
 
 secret:
   name: taskflow-secret
@@ -60,12 +66,12 @@ secret:
 
 ## Gateway API Configuration
 gatewayClass:
-  enabled: true
+  enabled: false
   name: nginx
   controllerName: gateway.nginx.org/nginx-gateway-controller
 
 gateway:
-  enabled: true
+  enabled: false
   name: taskflow-gateway
   namespace: nginx-gateway
   gatewayClassName: nginx
@@ -89,7 +95,7 @@ httpRoute:
     servicePort: 80
 
 ingress:
-  enabled: true
+  enabled: false
   name: external-alb
   namespace: nginx-gateway
   className: alb
