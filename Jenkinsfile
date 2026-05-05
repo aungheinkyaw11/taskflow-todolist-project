@@ -10,12 +10,17 @@ pipeline {
         FRONTEND_IMAGE = "taskflow-frontend"
 
         IMAGE_TAG = "${BUILD_NUMBER}"
+
+        GIT_REPO = "https://github.com/aungheinkyaw11/taskflow-todolist-project.git"
+        GITOPS_BRANCH = "argocd"
+        HELM_VALUES_FILE = "helm/taskflow/values-dev.yaml"
     }
 
     stages {
-        stage('Check Repo') {
+        stage('Check Source Repo') {
             steps {
                 sh '''
+                    echo "Current source workspace:"
                     pwd
                     ls -la
                     git branch
@@ -65,76 +70,80 @@ pipeline {
             }
         }
 
-        stage('Update Helm Values') {
+        stage('Checkout GitOps Branch') {
             steps {
-                sh '''
-                    echo "Updating Helm values for Argo CD"
-                    echo "New image tag: $IMAGE_TAG"
-        
-                    sed -i "/backend:/,/frontend:/ s/tag:.*/tag: \\"$IMAGE_TAG\\"/" helm/taskflow/values-dev.yaml
-                    sed -i "/frontend:/,/configMap:/ s/tag:.*/tag: \\"$IMAGE_TAG\\"/" helm/taskflow/values-dev.yaml
-        
-                    echo "Updated values-dev.yaml:"
-                    cat helm/taskflow/values-dev.yaml
-                '''
-            }
-        }
-        
-        stage('Commit Helm Changes') {
-            steps {
-                sh '''
-                    git config user.email "jenkins@taskflow.local"
-                    git config user.name "jenkins"
-        
-                    git add helm/taskflow/values-dev.yaml
-                    git commit -m "Update dev image tag to $IMAGE_TAG [skip ci]" || echo "No changes to commit"
-                '''
-            }
-        }
-        
-        stage('Push Helm Changes') {
-            steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'github_cred',
-                    usernameVariable: 'GIT_USERNAME',
-                    passwordVariable: 'GIT_TOKEN'
-                )]) {
+                dir('gitops') {
+                    checkout([$class: 'GitSCM',
+                        branches: [[name: "*/${GITOPS_BRANCH}"]],
+                        extensions: [
+                            [$class: 'CleanBeforeCheckout']
+                        ],
+                        userRemoteConfigs: [[
+                            credentialsId: 'github_cred',
+                            url: "${GIT_REPO}"
+                        ]]
+                    ])
+
                     sh '''
-                        git remote set-url origin https://$GIT_USERNAME:$GIT_TOKEN@github.com/aungheinkyaw11/taskflow-todolist-project.git
-                        git push origin HEAD:develop
+                        echo "GitOps branch workspace:"
+                        pwd
+                        git branch
+                        git status
+                        ls -la
                     '''
                 }
             }
         }
 
-        // stage('Deploy to EKS with Helm') {
-        //     steps {
-        //         sh '''
-        //             helm upgrade --install taskflow ./helm/taskflow \
-        //               -n taskflow \
-        //               --create-namespace \
-        //               -f ./helm/taskflow/values.yaml \
-        //               --set backend.image.repository=$ECR_REGISTRY/$BACKEND_IMAGE \
-        //               --set frontend.image.repository=$ECR_REGISTRY/$FRONTEND_IMAGE \
-        //               --set backend.image.tag=$IMAGE_TAG \
-        //               --set frontend.image.tag=$IMAGE_TAG
-        //         '''
-        //     }
-        // }
+        stage('Update Helm Values in GitOps Branch') {
+            steps {
+                dir('gitops') {
+                    sh '''
+                        echo "Updating Helm values for Argo CD"
+                        echo "New image tag: $IMAGE_TAG"
 
-        // stage('Verify Deployment') {
-        //     steps {
-        //         sh '''
-        //             kubectl rollout status deployment/taskflow-backend -n taskflow
-        //             kubectl rollout status deployment/taskflow-frontend -n taskflow
+                        sed -i "/backend:/,/frontend:/ s/tag:.*/tag: \\"$IMAGE_TAG\\"/" $HELM_VALUES_FILE
+                        sed -i "/frontend:/,/configMap:/ s/tag:.*/tag: \\"$IMAGE_TAG\\"/" $HELM_VALUES_FILE
 
-        //             kubectl get pods -n taskflow
+                        echo "Updated values-dev.yaml:"
+                        cat $HELM_VALUES_FILE
+                    '''
+                }
+            }
+        }
 
-        //             kubectl describe deployment taskflow-backend -n taskflow | grep Image
-        //             kubectl describe deployment taskflow-frontend -n taskflow | grep Image
-        //         '''
-        //     }
-        // }
+        stage('Commit and Push GitOps Changes') {
+            steps {
+                dir('gitops') {
+                    withCredentials([usernamePassword(
+                        credentialsId: 'github_cred',
+                        usernameVariable: 'GIT_USERNAME',
+                        passwordVariable: 'GIT_TOKEN'
+                    )]) {
+                        sh '''
+                            git config user.email "jenkins@taskflow.local"
+                            git config user.name "jenkins"
+
+                            git add $HELM_VALUES_FILE
+                            git commit -m "Update dev image tag to $IMAGE_TAG [skip ci]" || echo "No changes to commit"
+
+                            git remote set-url origin https://$GIT_USERNAME:$GIT_TOKEN@github.com/aungheinkyaw11/taskflow-todolist-project.git
+                            git push origin HEAD:$GITOPS_BRANCH
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Argo CD Deployment Info') {
+            steps {
+                sh '''
+                    echo "Jenkins finished CI and pushed GitOps change."
+                    echo "Argo CD should now detect the argocd branch change and sync automatically."
+                    echo "Image tag deployed by Argo CD should be: $IMAGE_TAG"
+                '''
+            }
+        }
     }
 
     post {
