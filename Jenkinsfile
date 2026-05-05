@@ -10,8 +10,6 @@ pipeline {
         FRONTEND_IMAGE = "taskflow-frontend"
 
         IMAGE_TAG = "${BUILD_NUMBER}"
-
-        HELM_VALUES_FILE = "helm/taskflow/values-dev.yaml"
     }
 
     stages {
@@ -67,58 +65,31 @@ pipeline {
             }
         }
 
-        stage('Update Helm Values') {
-            steps {
-                sh '''
-                    echo "Updating Helm values file: $HELM_VALUES_FILE"
-                    echo "New image tag: $IMAGE_TAG"
-
-                    sed -i "/backend:/,/frontend:/ s/tag:.*/tag: \\"$IMAGE_TAG\\"/" $HELM_VALUES_FILE
-                    sed -i "/frontend:/,/configMap:/ s/tag:.*/tag: \\"$IMAGE_TAG\\"/" $HELM_VALUES_FILE
-
-                    echo "Updated values-dev.yaml:"
-                    cat $HELM_VALUES_FILE
-                '''
-            }
-        }
-
-        stage('Commit Helm Changes') {
-            steps {
-                sh '''
-                    git config user.email "jenkins@taskflow.local"
-                    git config user.name "jenkins"
-
-                    git add $HELM_VALUES_FILE
-
-                    git commit -m "Update dev image tag to $IMAGE_TAG [skip ci]" || echo "No changes to commit"
-                '''
-            }
-        }
-
-        stage('Push Helm Changes') {
-            steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'github_cred',
-                    usernameVariable: 'GIT_USERNAME',
-                    passwordVariable: 'GIT_TOKEN'
-                )]) {
-                    sh '''
-                        git remote set-url origin https://$GIT_USERNAME:$GIT_TOKEN@github.com/aungheinkyaw11/taskflow-todolist-project.git
-                        git push origin HEAD:develop
-                    '''
-                }
-            }
-        }
-        stage ('Deploy to EKS with Helm') {
+        stage('Deploy to EKS with Helm') {
             steps {
                 sh '''
                     helm upgrade --install taskflow ./helm/taskflow \
-                    -n taskflow \
-                    --create-namespace \
-                    -f ./helm/taskflow/values.yaml \
-                    -f ./helm/taskflow/values-dev.yaml \
-                    --set backend.image.tag=$IMAGE_TAG \
-                    --set frontend.image.tag=$IMAGE_TAG
+                      -n taskflow \
+                      --create-namespace \
+                      -f ./helm/taskflow/values.yaml \
+                      --set backend.image.repository=$ECR_REGISTRY/$BACKEND_IMAGE \
+                      --set frontend.image.repository=$ECR_REGISTRY/$FRONTEND_IMAGE \
+                      --set backend.image.tag=$IMAGE_TAG \
+                      --set frontend.image.tag=$IMAGE_TAG
+                '''
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                sh '''
+                    kubectl rollout status deployment/taskflow-backend -n taskflow
+                    kubectl rollout status deployment/taskflow-frontend -n taskflow
+
+                    kubectl get pods -n taskflow
+
+                    kubectl describe deployment taskflow-backend -n taskflow | grep Image
+                    kubectl describe deployment taskflow-frontend -n taskflow | grep Image
                 '''
             }
         }
