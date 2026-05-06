@@ -1,12 +1,12 @@
 backend:
   replicaCount: 2
   image:
-    tag: "10"
+    tag: "11"
 
 frontend:
   replicaCount: 1
   image:
-    tag: "10"
+    tag: "11"
 
 configMap:
   data:
