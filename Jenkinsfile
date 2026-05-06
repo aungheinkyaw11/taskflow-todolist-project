@@ -11,16 +11,14 @@ pipeline {
 
         IMAGE_TAG = "${BUILD_NUMBER}"
 
-        GIT_REPO = "https://github.com/aungheinkyaw11/taskflow-todolist-project.git"
-        GITOPS_BRANCH = "argocd"
         HELM_VALUES_FILE = "helm/taskflow/values-dev.yaml"
     }
 
     stages {
-        stage('Check Source Repo') {
+        stage('Check Repo') {
             steps {
                 sh '''
-                    echo "Current source workspace:"
+                    echo "Current workspace:"
                     pwd
                     ls -la
                     git branch
@@ -70,67 +68,38 @@ pipeline {
             }
         }
 
-        stage('Checkout GitOps Branch') {
+        stage('Update Helm Values') {
             steps {
-                dir('gitops') {
-                    checkout([$class: 'GitSCM',
-                        branches: [[name: "*/${GITOPS_BRANCH}"]],
-                        extensions: [
-                            [$class: 'CleanBeforeCheckout']
-                        ],
-                        userRemoteConfigs: [[
-                            credentialsId: 'github_cred',
-                            url: "${GIT_REPO}"
-                        ]]
-                    ])
+                sh '''
+                    echo "Updating Helm values for Argo CD"
+                    echo "New image tag: $IMAGE_TAG"
 
-                    sh '''
-                        echo "GitOps branch workspace:"
-                        pwd
-                        git branch
-                        git status
-                        ls -la
-                    '''
-                }
+                    sed -i "/backend:/,/frontend:/ s/tag:.*/tag: \\"$IMAGE_TAG\\"/" $HELM_VALUES_FILE
+                    sed -i "/frontend:/,/configMap:/ s/tag:.*/tag: \\"$IMAGE_TAG\\"/" $HELM_VALUES_FILE
+
+                    echo "Updated values-dev.yaml:"
+                    cat $HELM_VALUES_FILE
+                '''
             }
         }
 
-        stage('Update Helm Values in GitOps Branch') {
+        stage('Commit and Push Helm Changes') {
             steps {
-                dir('gitops') {
+                withCredentials([usernamePassword(
+                    credentialsId: 'github_cred',
+                    usernameVariable: 'GIT_USERNAME',
+                    passwordVariable: 'GIT_TOKEN'
+                )]) {
                     sh '''
-                        echo "Updating Helm values for Argo CD"
-                        echo "New image tag: $IMAGE_TAG"
+                        git config user.email "jenkins@taskflow.local"
+                        git config user.name "jenkins"
 
-                        sed -i "/backend:/,/frontend:/ s/tag:.*/tag: \\"$IMAGE_TAG\\"/" $HELM_VALUES_FILE
-                        sed -i "/frontend:/,/configMap:/ s/tag:.*/tag: \\"$IMAGE_TAG\\"/" $HELM_VALUES_FILE
+                        git add $HELM_VALUES_FILE
+                        git commit -m "Update dev image tag to $IMAGE_TAG [skip ci]" || echo "No changes to commit"
 
-                        echo "Updated values-dev.yaml:"
-                        cat $HELM_VALUES_FILE
+                        git remote set-url origin https://$GIT_USERNAME:$GIT_TOKEN@github.com/aungheinkyaw11/taskflow-todolist-project.git
+                        git push origin HEAD:argocd
                     '''
-                }
-            }
-        }
-
-        stage('Commit and Push GitOps Changes') {
-            steps {
-                dir('gitops') {
-                    withCredentials([usernamePassword(
-                        credentialsId: 'github_cred',
-                        usernameVariable: 'GIT_USERNAME',
-                        passwordVariable: 'GIT_TOKEN'
-                    )]) {
-                        sh '''
-                            git config user.email "jenkins@taskflow.local"
-                            git config user.name "jenkins"
-
-                            git add $HELM_VALUES_FILE
-                            git commit -m "Update dev image tag to $IMAGE_TAG [skip ci]" || echo "No changes to commit"
-
-                            git remote set-url origin https://$GIT_USERNAME:$GIT_TOKEN@github.com/aungheinkyaw11/taskflow-todolist-project.git
-                            git push origin HEAD:$GITOPS_BRANCH
-                        '''
-                    }
                 }
             }
         }
@@ -138,9 +107,8 @@ pipeline {
         stage('Argo CD Deployment Info') {
             steps {
                 sh '''
-                    echo "Jenkins finished CI and pushed GitOps change."
-                    echo "Argo CD should now detect the argocd branch change and sync automatically."
-                    echo "Image tag deployed by Argo CD should be: $IMAGE_TAG"
+                    echo "Jenkins pushed image tag $IMAGE_TAG to argocd branch."
+                    echo "Argo CD should sync automatically."
                 '''
             }
         }
