@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: public.ecr.aws/m1p2k8l9/taskflow-frontend:1.0.1
+          image: aungheinkyaw/taskflow-frontend:v1.0.0
           ports:
             - containerPort: 80
           resources:

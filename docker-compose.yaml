@@ -25,6 +25,7 @@ services:
 
   # Backend
   backend:
+    image: taskflow-backend:v1.0.0
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -46,6 +47,7 @@ services:
 
   # React Frontend
   frontend:
+    image: taskflow-frontend:v1.0.0
     build:
       context: ./frontend
       dockerfile: Dockerfile

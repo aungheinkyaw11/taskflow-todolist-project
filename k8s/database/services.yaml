@@ -1,0 +1,13 @@
+# Application connects using DB_HOST=db
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+spec:
+  type: ClusterIP
+  selector:
+    app: taskflow-db
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
