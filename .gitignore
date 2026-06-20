@@ -1,18 +1,53 @@
-# Dependencies
+# Terraform local working directories
+**/.terraform/
+
+# Terraform state can contain sensitive values and local infrastructure details.
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# Local variable files may contain account IDs, profiles, secrets, or environment-specific values.
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+
+# Terraform plan files
+*.tfplan
+*.plan
+
+# Keep provider locks committed for reproducible installs.
+!.terraform.lock.hcl
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Node dependencies and build output
 node_modules/
-
-# Environment variables — NEVER commit these
-#.env
-
-# Build output
 dist/
 build/
+coverage/
 
 # Logs
 *.log
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-# OS files
+# Local database/data files
+.data/
+*.sqlite
+*.sqlite3
+
+# Docker/local overrides
+docker-compose.override.yaml
+docker-compose.override.yml
+
+# OS/editor files
 .DS_Store
-Thumbs.db
+.idea/
+.vscode/
 .codex

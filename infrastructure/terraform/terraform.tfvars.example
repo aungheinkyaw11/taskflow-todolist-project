@@ -1,0 +1,22 @@
+project_name = "taskflow"
+environment  = "dev"
+aws_region   = "us-east-1"
+aws_profile  = "mhmarkets"
+vpc_cidr     = "10.20.0.0/16"
+node_instance_types = ["t3.medium"]
+
+node_group_name         = "eks-node-group"
+node_group_desired_size = 1
+node_group_min_size     = 1
+node_group_max_size     = 2
+node_group_disk_size    = 30
+
+repositories = [
+  "frontend",
+  "gateway",
+  "auth",
+  "order-service",
+  "orders",
+  "product-service",
+  "user-service"
+]

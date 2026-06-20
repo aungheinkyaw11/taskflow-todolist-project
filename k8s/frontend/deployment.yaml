@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: aungheinkyaw/taskflow-frontend:v1.0.0
+          image: aungheinkyaw/taskflow-frontend:v1.0.1
           ports:
             - containerPort: 80
           resources:
