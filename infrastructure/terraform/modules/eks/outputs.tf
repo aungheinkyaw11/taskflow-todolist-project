@@ -18,6 +18,14 @@ output "node_role_arn" {
   value = aws_iam_role.node_role.arn
 }
 
+output "oidc_provider_arn" {
+  value = aws_iam_openid_connect_provider.oidc.arn
+}
+
+output "oidc_issuer_url" {
+  value = aws_eks_cluster.eks.identity[0].oidc[0].issuer
+}
+
 output "ebs_csi_role_arn" {
   value = aws_iam_role.ebs_csi_irsa.arn
 }

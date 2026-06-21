@@ -3,6 +3,7 @@ environment  = "dev"
 aws_region   = "us-east-1"
 aws_profile  = "mhmarkets"
 vpc_cidr     = "10.20.0.0/16"
+endpoint_public_access_cidrs = ["203.0.113.10/32"]
 node_instance_types = ["t3.medium"]
 
 node_group_name         = "eks-node-group"

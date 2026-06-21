@@ -13,6 +13,11 @@ variable "private_subnet_ids" {
   type        = list(string)
 }
 
+variable "endpoint_public_access_cidrs" {
+  description = "CIDR blocks allowed to access the public EKS Kubernetes API endpoint."
+  type        = list(string)
+}
+
 variable "node_group_name" {
   description = "EKS managed node group name."
   type        = string
