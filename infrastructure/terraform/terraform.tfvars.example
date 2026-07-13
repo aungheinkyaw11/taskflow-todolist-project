@@ -20,8 +20,8 @@ node_group_max_size     = 2
 node_group_disk_size    = 30
 
 repositories = [
-  "taskflow-backend",
-  "taskflow-frontend"
+  "backend",
+  "frontend"
 ]
 
 database_name                = "taskflow_db"

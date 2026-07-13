@@ -1,6 +1,6 @@
 # TaskFlow
 
-TaskFlow is a full-stack task manager with a React frontend, an Express API, and PostgreSQL. This repository contains the application source, Docker images, the database schema, and Terraform for the AWS network and EKS cluster.
+TaskFlow is a full-stack task manager with a React frontend, an Express API, and PostgreSQL. This repository contains the application source, Docker images, database schema, deployment guide, and Terraform for the complete AWS platform.
 
 ![TaskFlow dashboard](image.png)
 
@@ -10,7 +10,8 @@ TaskFlow is a full-stack task manager with a React frontend, an Express API, and
 taskflow-todolist-project/
 ├── backend/                  Express API, authentication, tasks, and SQL schema
 ├── frontend/                 React/Vite application and production NGINX image
-├── infrastructure/terraform VPC and EKS infrastructure
+├── infrastructure/terraform AWS infrastructure and cluster platform services
+├── DEPLOYMENT_GUIDE.md       Detailed end-to-end AWS deployment runbook
 ├── helm/                     Older application chart; GitOps uses the other repository
 ├── k8s/                      Older raw Kubernetes manifests kept for reference
 ├── docker-compose.yaml       Local PostgreSQL and application containers
@@ -111,7 +112,7 @@ docker build -t taskflow-backend:local backend
 docker build -t taskflow-frontend:local frontend
 ```
 
-For ECR, authenticate to the same AWS region that contains the repositories, tag each image with an immutable version such as a Git commit SHA, and push it:
+The current GitOps values use Docker Hub images. To use the ECR repositories created by Terraform instead, authenticate to ECR, push immutable tags, and update the GitOps image repository values:
 
 ```bash
 AWS_ACCOUNT_ID=123456789012
@@ -127,15 +128,15 @@ docker push "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/taskflow-backend:
 docker push "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/taskflow-frontend:$IMAGE_TAG"
 ```
 
-ECR repositories are not yet created by this repository's Terraform. Create them before pushing, or add an ECR Terraform module first.
+With `repositories = ["backend", "frontend"]`, Terraform creates `taskflow-backend` and `taskflow-frontend`. The module adds the project prefix, so do not include `taskflow-` in each list item.
 
 ## Build the AWS infrastructure
 
-The Terraform configuration creates two public subnets, two private subnets, one NAT gateway shared by both private subnets, an EKS cluster, a managed node group, IAM roles, an OIDC provider, and the EBS CSI add-on.
+Terraform creates the VPC and NAT networking, EKS and EBS CSI, ECR repositories, private RDS PostgreSQL, Argo CD, kube-prometheus-stack, Gateway API CRDs, NGINX Gateway Fabric, and the AWS Load Balancer Controller.
 
 Follow [the Terraform guide](infrastructure/terraform/README.md) for AWS SSO login, variable configuration, plan/apply, kubeconfig, validation, and cleanup.
 
-Terraform does not currently create ECR, RDS, Argo CD, ingress controllers, or Route 53 records. Those dependencies must exist before the production chart is healthy.
+Terraform does not build or push application images, apply the TaskFlow Argo CD `Application`, create Route 53 records, or issue TLS certificates. Follow [the deployment runbook](DEPLOYMENT_GUIDE.md) after the infrastructure apply.
 
 ## Deploy through GitOps
 
@@ -157,7 +158,7 @@ See the `taskflow-gitops` README for controller prerequisites, first deployment,
 | Database tables or indexes | `backend/schema.sql` plus a proper migration for an existing database |
 | React pages, components, or API calls | `frontend/src/` |
 | Local credentials or ports | `.env` |
-| VPC CIDR, region, EKS version, or node size | `infrastructure/terraform/terraform.tfvars` |
+| VPC CIDR, region, EKS version, nodes, ECR, or RDS settings | `infrastructure/terraform/terraform.tfvars` |
 | AWS resource implementation | `infrastructure/terraform/modules/vpc/` or `modules/eks/` |
 | Shared Kubernetes settings | `taskflow-gitops/taskflow/values.yaml` |
 | Development replicas or image tags | `taskflow-gitops/taskflow/values-dev.yaml` |

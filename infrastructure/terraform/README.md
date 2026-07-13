@@ -1,6 +1,6 @@
 # TaskFlow AWS infrastructure
 
-This Terraform configuration builds the network and EKS foundation used by TaskFlow. The resources are written directly with AWS provider resources so each part is visible and teachable.
+This Terraform configuration builds the AWS infrastructure and installs the shared EKS platform services used by TaskFlow. The modules use direct provider resources so each part remains visible and teachable.
 
 ## What Terraform creates
 
@@ -15,8 +15,11 @@ flowchart TB
     PrivateA --> Nodes[EKS managed nodes]
     PrivateB --> Nodes
     EKS[EKS control plane] --> Nodes
+    Nodes --> RDS[(Private RDS PostgreSQL)]
+    ECR[ECR repositories] --> Nodes
     OIDC[OIDC provider] --> EBSRole[EBS CSI IAM role]
     EBSRole --> EBS[EBS CSI add-on]
+    EKS --> Platform[Argo CD, monitoring, ALB controller, Gateway API, NGINX]
 ```
 
 The VPC module creates:
@@ -37,14 +40,25 @@ The EKS module creates:
 - EBS CSI IAM role restricted to its Kubernetes service account
 - AWS EBS CSI managed add-on
 
-This configuration does not create ECR repositories, an RDS database, Argo CD, the AWS Load Balancer Controller, NGINX Gateway Fabric, Route 53 records, or TLS certificates.
+Additional modules create:
+
+- ECR repositories from the `repositories` list, with scan-on-push enabled
+- Encrypted, private RDS PostgreSQL and its subnet group and security group
+- Argo CD in the `argocd` namespace
+- `kube-prometheus-stack` in the `monitoring` namespace
+- AWS Load Balancer Controller with an OIDC-restricted IAM role
+- Gateway API standard CRDs
+- NGINX Gateway Fabric in the `nginx-gateway` namespace
+
+Terraform does not build or push application images, apply `taskflow-dev.yaml`, create Route 53 records, or issue TLS certificates.
 
 ## Prerequisites
 
 - Terraform 1.5.7 or newer
 - AWS CLI v2
-- An AWS SSO profile with permission to create VPC, EC2, EKS, IAM, and related resources
+- An AWS SSO profile with permission to create VPC, EC2, EKS, ECR, RDS, IAM, and related resources
 - `kubectl`
+- Helm 3 and internet access for provider, chart, policy, and CRD downloads
 
 The examples below use the profile `mhmarkets`; replace it with your profile.
 
@@ -84,6 +98,9 @@ vpc_cidr     = "10.20.0.0/16"
 cluster_name    = "taskflow-cluster"
 cluster_version = "1.33"
 
+# Replace this documentation-only address with your public IP.
+endpoint_public_access_cidrs = ["203.0.113.10/32"]
+
 node_group_name         = "taskflow-node-group"
 node_instance_types     = ["t3.medium"]
 node_capacity_type      = "ON_DEMAND"
@@ -91,9 +108,22 @@ node_group_desired_size = 1
 node_group_min_size     = 1
 node_group_max_size     = 2
 node_group_disk_size    = 30
+
+repositories = ["backend", "frontend"]
+
+database_name                = "taskflow_db"
+database_username            = "taskflow_user"
+database_password            = "replace-with-a-strong-password"
+database_engine_version      = "15.10"
+database_instance_class      = "db.t4g.micro"
+database_allocated_storage   = 20
+database_deletion_protection = false
+database_skip_final_snapshot = true
 ```
 
-Choose a VPC CIDR that does not overlap networks that must connect to it. Confirm that `cluster_version` is supported by EKS in `aws_region` before applying. Keep EKS, ECR, and RDS in one region unless cross-region traffic is intentional.
+Choose a VPC CIDR that does not overlap networks that must connect to it. Replace the example API CIDR with your public IP plus `/32`; `203.0.113.10` is documentation-only and will not grant you access. Confirm that `cluster_version` is supported by EKS in `aws_region` before applying.
+
+Repository list items are suffixes: `backend` becomes `taskflow-backend`. Keep EKS, ECR, and RDS in one region unless cross-region traffic is intentional.
 
 `terraform.tfvars` is ignored because it can contain account-specific data. Commit changes to `terraform.tfvars.example` when adding a new shared variable.
 
@@ -106,7 +136,7 @@ terraform validate
 terraform plan -out=taskflow.tfplan
 ```
 
-Read the plan carefully. A normal first plan includes VPC networking, IAM roles and policies, the EKS control plane, EC2 worker nodes, OIDC, and the EBS CSI add-on. EKS creation commonly takes 15 to 30 minutes.
+Read the plan carefully. A normal first plan includes networking, IAM, EKS and nodes, ECR, RDS, plus Helm and Kubernetes resources for the platform services. The first apply can take 20 to 40 minutes because EKS and several Helm releases must become ready.
 
 Do not apply a saved plan after changing variables or after someone else changes the infrastructure; create a fresh plan.
 
@@ -130,6 +160,19 @@ kubectl get nodes
 kubectl get pods -A
 ```
 
+Then inspect the platform outputs and services:
+
+```bash
+terraform output database_endpoint
+terraform output database_name
+kubectl get pods -n argocd
+kubectl get pods -n monitoring
+kubectl get pods -n nginx-gateway
+kubectl get pods -n kube-system -l app.kubernetes.io/name=aws-load-balancer-controller
+```
+
+Terraform installs Argo CD but does not register TaskFlow. Update the GitOps database endpoint, image repositories, tags, and secrets, then apply `taskflow-gitops/argocd/taskflow-dev.yaml`.
+
 Creating the cluster does not automatically grant every SSO role Kubernetes administrator access. If `kubectl` reports an authentication or authorization error, add the SSO IAM role as an EKS access entry and associate the appropriate EKS access policy before continuing.
 
 ## Configuration map
@@ -138,11 +181,15 @@ Creating the cluster does not automatically grant every SSO role Kubernetes admi
 | --- | --- | --- |
 | AWS account profile and region | `terraform.tfvars` | Selects the AWS identity and deployment region |
 | VPC CIDR | `terraform.tfvars` | Controls all generated subnet CIDRs |
+| EKS API allowlist | `terraform.tfvars` | Restricts public Kubernetes API access to approved CIDRs |
 | Subnet count or NAT design | `modules/vpc/main.tf` | Changes network topology and cost/availability |
 | Kubernetes version | `terraform.tfvars` | Sets EKS control plane and node version |
 | Node instance type and capacity | `terraform.tfvars` | Changes compute cost and available resources |
 | Node count and disk size | `terraform.tfvars` | Changes scaling range and node EBS volume size |
 | EKS IAM policies or add-ons | `modules/eks/main.tf` | Changes AWS permissions or cluster add-ons |
+| ECR repository suffixes | `terraform.tfvars` | Creates project-prefixed image repositories |
+| RDS database, instance, storage, and deletion behavior | `terraform.tfvars` | Controls the private PostgreSQL instance |
+| Platform chart versions and defaults | Corresponding module under `modules/` | Controls Argo CD, monitoring, ALB, Gateway API, and NGINX installs |
 | Root-to-module wiring | `main.tf` | Passes root variables and module outputs |
 | Shared input definitions | `variables.tf` | Defines type, description, and defaults |
 | Reusable outputs | `outputs.tf` | Exposes IDs and connection information |
@@ -181,7 +228,7 @@ The Terraform resource label `node_group` is not necessarily the final AWS node 
 
 ## Destroy the environment
 
-Destroying removes the cluster, nodes, NAT gateway, and VPC resources managed by this state. Back up application data first; workloads using persistent volumes may need separate cleanup.
+Destroying removes RDS, ECR images because `force_delete` is enabled, cluster services, EKS, nodes, NAT, and VPC resources managed by this state. Back up the database and any persistent workloads first. For production, enable RDS deletion protection and do not skip the final snapshot.
 
 ```bash
 terraform plan -destroy
