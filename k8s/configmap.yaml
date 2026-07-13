@@ -12,4 +12,5 @@ data:
   DB_PORT: "5432"
   DB_SSL: "true"
   NODE_ENV: "production"
-  CLIENT_URL: "http://zaneapp.mohicanstech.com"  # ← frontend URL for CORS and email links
+  #CLIENT_URL: "http://zaneapp.mohicanstech.com"  # ← frontend URL for CORS and email links
+  CLIENT_URL: "http://172.19.255.190"
