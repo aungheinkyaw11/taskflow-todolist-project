@@ -2,8 +2,8 @@ backend:
   name: taskflow-backend
   replicaCount: 1
   image:
-    repository: public.ecr.aws/m1p2k8l9/taskflow-backend
-    tag: "1.0.0"
+    repository: 499193102935.dkr.ecr.us-east-1.amazonaws.com/taskflow-backend
+    tag: "1.0"
     pullPolicy: IfNotPresent
   containerPort: 5001
   service:
@@ -23,8 +23,8 @@ frontend:
   name: taskflow-frontend
   replicaCount: 1
   image:
-    repository: public.ecr.aws/m1p2k8l9/taskflow-frontend
-    tag: "1.0.1"
+    repository: 499193102935.dkr.ecr.us-east-1.amazonaws.com/taskflow-frontend
+    tag: "1.0"
     pullPolicy: IfNotPresent
   containerPort: 80
   service:
@@ -45,9 +45,14 @@ configMap:
   data:
     NODE_ENV: "production"
     PORT: "5001"
+    DB_USER: "taskflow_user"
+    DB_NAME: "taskflow"
+    DB_HOST: "taskflow.cm7mwco6y04o.us-east-1.rds.amazonaws.com"
+    DB_PORT: "5432"
+    DB_SSL: "true"
 
 secret:
   name: taskflow-secret
   data:
-    DB_PASSWORD: "taskflowuserstrongpassword"
-    JWT_SECRET: "56adf552a639de170b4ac63fc2561c8a2cb65275ca8735402c86bff06aadfdb4"
+    DB_PASSWORD: "taskflowuser123"
+    JWT_SECRET: "ab140d6a37f77fa759639ab6feefdf4226ab8c6672adbd01bee28fecef2a4af7"

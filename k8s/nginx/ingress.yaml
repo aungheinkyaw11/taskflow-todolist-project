@@ -9,7 +9,7 @@ metadata:
 spec:
   ingressClassName: alb
   rules:
-    - host: zaneapp.mohicanstech.com
+    - host: taskflow.learnops.site
       http:
         paths:
           - path: /

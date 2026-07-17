@@ -8,7 +8,7 @@ data:
   PORT: "5001"
   DB_USER: "taskflow_user"
   DB_NAME: "taskflow"
-  DB_HOST: "taskflow.crmeaegqqncj.us-east-1.rds.amazonaws.com"  # ← RDS endpoint!
+  DB_HOST: "taskflow.cm7mwco6y04o.us-east-1.rds.amazonaws.com"  # ← RDS endpoint!
   DB_PORT: "5432"
   DB_SSL: "true"
   NODE_ENV: "production"
